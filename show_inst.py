@@ -2,9 +2,16 @@ import boto3
 from pprint import pprint
 from common import *
 from os.path import expanduser
+import argparse
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-k', '--kill', action='store_true',
+        help='Kill all spot instances'
+    )
+    args = parser.parse_args()
     client = boto3.client('ec2', region_name='ap-southeast-1')
 
     resp = client.describe_instances()
@@ -41,8 +48,22 @@ def main():
         for k in keys:
             j_print(inst[k])
         new_line()
-        with open(expanduser('~/.ec2_ip'), 'w') as f:
-            f.write(str(inst['PublicIpAddress']))
+        if not args.kill:
+            with open(expanduser('~/.ec2_ip'), 'w') as f:
+                f.write(str(inst['PublicIpAddress']))
+        else:
+            resp = client.cancel_spot_instance_requests(
+                SpotInstanceRequestIds=[
+                    inst['SpotInstanceRequestId'],
+                ],
+            )
+            print(resp)
+            resp = client.terminate_instances(
+                InstanceIds=[
+                    inst['InstanceId'],
+                ],
+            )
+            print(resp)
 
 
 if __name__ == '__main__':
