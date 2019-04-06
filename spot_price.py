@@ -18,7 +18,7 @@ def main():
         InstanceTypes=[
             # 't2.xlarge',
             # 't3.xlarge',
-            'c1.xlarge',
+            # 'c1.xlarge',
             'p3.2xlarge',
             'm2.4xlarge',
             'r4.2xlarge',

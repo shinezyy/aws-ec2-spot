@@ -40,4 +40,19 @@ class EC2Config:
     def get_config(self, api_name: str):
         return self.df[self.df['API Name'] == api_name]
 
+    def filter_config(self, fuzzy_name: str, ncpu: int):
+        pass
+        # return self.df[
+        #     self.df['API Name'] == fuzzy_name \
+        #     and  self.df['API Name'] ==]
+
+
+def main():
+    ec2config = EC2Config()
+
+
+if __name__ == '__main__':
+    main()
+
+
 

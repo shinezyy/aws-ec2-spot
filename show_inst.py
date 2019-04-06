@@ -1,6 +1,7 @@
 import boto3
 from pprint import pprint
 from common import *
+from os.path import expanduser
 
 
 def main():
@@ -9,7 +10,9 @@ def main():
     resp = client.describe_instances()
 
     if len(resp['Reservations']):
-        instances = resp['Reservations'][0]['Instances']
+        # pprint(resp['Reservations'])
+        instances = [resp['Reservations'][i]['Instances'][0]
+                     for i in range(0, len(resp['Reservations']))]
     else:
         return
     # pprint(instances)
@@ -38,6 +41,8 @@ def main():
         for k in keys:
             j_print(inst[k])
         new_line()
+        with open(expanduser('~/.ec2_ip'), 'w') as f:
+            f.write(str(inst['PublicIpAddress']))
 
 
 if __name__ == '__main__':
