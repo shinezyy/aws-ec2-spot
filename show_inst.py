@@ -1,23 +1,6 @@
 import boto3
-import pytz
-from datetime import datetime
 from pprint import pprint
-
-
-tz = pytz.timezone('Asia/Shanghai')
-
-
-def j_print(s):
-    if isinstance(s, datetime):
-        # print(pytz.utc.localize(s, is_dst=None).astimezone(tz), end='')
-        print(s.astimezone(tz).strftime('%y.%m.%d-%H:%M'), end='')
-        # print(s.replace(tzinfo=tz), end='')
-    else:
-        print(str(s).ljust(24, ' '), end='')
-
-
-def new_line():
-    print('')
+from common import *
 
 
 def main():
@@ -47,7 +30,6 @@ def main():
     for k in keys:
         j_print(k)
     new_line()
-
 
     for inst in instances:
         if inst['State']['Name'] == 'terminated':
