@@ -3,7 +3,9 @@ from pprint import pprint
 from common import *
 from os.path import expanduser
 import argparse
+import common as c
 
+wc = c.CommonClient()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -11,8 +13,11 @@ def main():
         '-k', '--kill', action='store_true',
         help='Kill all spot instances'
     )
+    parser.add_argument("-r", "--region", choices=wc.get_regions() + ['all'],
+            default=wc.get_default_region())
     args = parser.parse_args()
-    client = boto3.client('ec2', region_name='ap-southeast-1')
+
+    client = boto3.client('ec2', region_name=args.region)
 
     resp = client.describe_instances()
 
@@ -31,8 +36,8 @@ def main():
         # 'ImageId',
         'InstanceId',
         # 'InstanceLifecycle',
-        'SpotInstanceRequestId',
         'LaunchTime',
+        'SpotInstanceRequestId',
     ]
 
     # header
@@ -45,9 +50,18 @@ def main():
         if inst['State']['Name'] == 'terminated':
             continue
         j_print(inst['Placement']['AvailabilityZone'])
+
+        is_spot = True
         for k in keys:
-            j_print(inst[k])
+            if k in inst:
+                j_print(inst[k])
+            else:
+                is_spot = False
         new_line()
+
+        if not is_spot:
+            continue
+
         if not args.kill:
             with open(expanduser('~/.ec2_ip'), 'w') as f:
                 f.write(str(inst['PublicIpAddress']))

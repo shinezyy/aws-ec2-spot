@@ -1,41 +1,39 @@
 import boto3
+import argparse
+import common as c
 
-resource = boto3.resource('ec2', region_name='ap-southeast-1')
+wc = c.CommonClient()
 
-avail_zones = [
-    'ap-southeast-1a',
-    'ap-southeast-1b',
-    'ap-southeast-1c',
-]
+def main():
+    parser = argparse.ArgumentParser(description='open an instance')
+    parser.add_argument('-t', '--instance-type', required=True, choices=c.get_all_types())
+    parser.add_argument("-r", "--region", choices=wc.get_regions() + ['all'],
+            default=wc.get_default_region())
+    args = parser.parse_args()
 
-instance = resource.create_instances(
-    InstanceType=
-    # 't2.xlarge',
-    # 't3.xlarge',
-    # 'c1.xlarge',
-    # 'p3.2xlarge',
-    # 'm2.4xlarge',
-    # 'r4.2xlarge',
-    # 'i3.2xlarge',
-    # 'c5d.2xlarge',
-    'c5.2xlarge',
-    # 'm5d.2xlarge',
-    # 'm5.2xlarge',
-    # 'r5d.2xlarge',
-    # 'r5.2xlarge',
-    # 'z1d.2xlarge',
-    # 'z1d.xlarge',
+    resource = boto3.resource('ec2', region_name=args.region)
 
-    LaunchTemplate={
-        'LaunchTemplateId': 'lt-06db38f15ad93e916',
-        'Version': '4',
-    },
-    # Placement={
-    #     'AvailabilityZone': avail_zones[2],
-    # },
-    MinCount=1,
-    MaxCount=1,
-    KeyName='zyy-console'
-)
+    # avail_zones = [
+    #     'ap-southeast-1a',
+    #     'ap-southeast-1b',
+    #     'ap-southeast-1c',
+    # ]
 
-print(instance)
+    instance = resource.create_instances(
+        InstanceType=args.instance_type,
+        LaunchTemplate={
+            'LaunchTemplateId': 'lt-03eecea2ddd365870',
+            'Version': '1',
+        },
+        # Placement={
+        #     'AvailabilityZone': avail_zones[2],
+        # },
+        MinCount=1,
+        MaxCount=1,
+        KeyName='zyy-console'
+    )
+
+    print(instance)
+
+if __name__ == '__main__':
+    main()
