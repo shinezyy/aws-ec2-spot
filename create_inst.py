@@ -9,6 +9,8 @@ def main():
     parser.add_argument('-t', '--instance-type', required=True, choices=c.get_all_types())
     parser.add_argument("-r", "--region", choices=wc.get_regions() + ['all'],
             default=wc.get_default_region())
+    parser.add_argument("-i", "--id", required=True)
+    parser.add_argument("-v", "--version", required=True)
     args = parser.parse_args()
 
     resource = boto3.resource('ec2', region_name=args.region)
@@ -22,8 +24,8 @@ def main():
     instance = resource.create_instances(
         InstanceType=args.instance_type,
         LaunchTemplate={
-            'LaunchTemplateId': 'lt-03eecea2ddd365870',
-            'Version': '1',
+            'LaunchTemplateId': args.id,
+            'Version': args.version,
         },
         # Placement={
         #     'AvailabilityZone': avail_zones[2],

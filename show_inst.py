@@ -65,6 +65,16 @@ def main():
         if not args.kill:
             with open(expanduser('~/.ec2_ip'), 'w') as f:
                 f.write(str(inst['PublicIpAddress']))
+
+            with open(expanduser('~/.ssh/config.d/spot_config_template')) as inf, \
+                    open(expanduser('~/.ssh/config.d/spot_config'), "w") as outf:
+                for line in inf:
+                    if line.strip().startswith("HostName"):
+                        outf.write("    Hostname {}".format(inst['PublicIpAddress']))
+                        outf.write("\n")
+                    else:
+                        outf.write(line)
+
         else:
             resp = client.cancel_spot_instance_requests(
                 SpotInstanceRequestIds=[

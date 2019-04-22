@@ -2,6 +2,7 @@ import boto3
 import argparse
 import pandas as pd
 import sys
+import json
 
 from pprint import pprint
 from datetime import datetime, timedelta
@@ -9,7 +10,13 @@ from datetime import datetime, timedelta
 import common as c
 
 
-def get_instances(n_core: int = None):
+def get_spot_int_rate(region: str, inst_type: str):
+    rate = json.load(open('./data/spot-advisor-data.json'))['spot_advisor']
+    region_rate = rate[region]['Linux']
+    return int(region_rate[inst_type]['r'])
+
+
+def get_instances(n_core: int = None, t: str = None):
     inst_list = c.get_all_types()
     if n_core is None:
         pass
@@ -23,6 +30,11 @@ def get_instances(n_core: int = None):
         inst_list = [x for x in inst_list if '.8xl' in x]
     else:
         assert False
+    if t is None:
+        pass
+    else:
+        inst_list = [x for x in inst_list if t in x]
+
     return inst_list
 
 
@@ -30,7 +42,7 @@ wc = c.CommonClient()
 
 parser = argparse.ArgumentParser(description='get spot price and process')
 parser.add_argument("-s", "--sort", required=True, choices=[
-    "price", "ce",
+    "price", "ce", "ir"
     ])
 parser.add_argument("-c", "--cores", choices=[4, 8, 16, 32], type=int)
 
@@ -38,6 +50,8 @@ parser.add_argument("-r", "--region", choices=wc.get_regions() + ['all'],
         default=wc.get_default_region())
 
 parser.add_argument("-z", "--avail-zone", default='ap-southeast-1c')
+
+parser.add_argument("-t", "--type")
 
 args = parser.parse_args()
 
@@ -59,7 +73,7 @@ foreign_keys = [
 def get_spot_history(region: str):
     client = wc.get_client(region)
     resp = client.describe_spot_price_history(
-        InstanceTypes=get_instances(args.cores),
+        InstanceTypes=get_instances(args.cores, args.type),
         StartTime=datetime.today() - timedelta(1),
         ProductDescriptions=['Linux/UNIX'],
     )
@@ -79,6 +93,11 @@ def get_spot_history(region: str):
         except ValueError as e:
             row[len(keys)] = 0
 
+        try:
+            row.append(get_spot_int_rate(region, history['InstanceType']))
+        except KeyError as e:
+            row.append(100)
+
         table.append(row)
     return table
 
@@ -91,26 +110,39 @@ def main():
     else:
         table = get_spot_history(args.region)
 
-    table = pd.DataFrame.from_records(table, columns=keys + foreign_keys)
+    table = pd.DataFrame.from_records(table, columns=keys + foreign_keys + ['intr rate'])
     table = table.sort_values(by='Timestamp')
     table = table.drop_duplicates(
         subset=['AvailabilityZone',
                 'InstanceType'], keep='last')
 
     table['SpotPrice'] = table['SpotPrice'].astype(float)
-    print(table)
 
-    table = table.sort_values(by='SpotPrice')
-    table = table.drop_duplicates(
-        subset=['InstanceType'], keep='first')
+    # table = table.sort_values(by='SpotPrice')
 
     table['CostEfficiency'] = table['Compute Units (ECU)'] / table['SpotPrice']
 
+    small_is_better = {
+            }
+
     if args.sort == 'ce':
-        table = table.sort_values(by='CostEfficiency', ascending=False)
+        table = table.sort_values(by=['CostEfficiency', 'intr rate', 'SpotPrice',],
+                ascending=[False, True, True,])
+    elif args.sort == 'price':
+        table = table.sort_values(by=['SpotPrice', 'intr rate', 'CostEfficiency',],
+                ascending=[True, True, False])
     else:
-        table = table.sort_values(by='SpotPrice', ascending=True)
+        table = table.sort_values(by=['intr rate', 'SpotPrice', 'CostEfficiency',],
+                ascending=[True, True, False])
+
     print(table)
+    table.to_csv('./table-{}.csv'.format(args.cores), index=None)
+
+    if args.type is None:
+        table = table.drop_duplicates(
+            subset=['InstanceType'], keep='first')
+        print(table)
+
     # for row in table.iterrows():
     #     row = row[1]
     #     print(row)
