@@ -4,7 +4,6 @@ import pandas as pd
 import sys
 import json
 
-from pprint import pprint
 from datetime import datetime, timedelta
 
 import common as c
@@ -44,7 +43,7 @@ parser = argparse.ArgumentParser(description='get spot price and process')
 parser.add_argument("-s", "--sort", required=True, choices=[
     "price", "ce", "ir"
     ])
-parser.add_argument("-c", "--cores", choices=[4, 8, 16, 32], type=int)
+parser.add_argument("-c", "--cores", choices=[1, 2, 4, 8, 16, 32], type=int)
 
 parser.add_argument("-r", "--region", choices=wc.get_regions() + ['all'],
         default=wc.get_default_region())

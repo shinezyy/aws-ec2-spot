@@ -89,11 +89,12 @@ freq_list = [
 
 
 class CommonClient:
-    def __init__(self):
+    def __init__(self, t='ec2'):
         self.regions = None
         self.azs = None
         self.default_region = 'ap-southeast-1'
-        self.client = boto3.client('ec2', self.default_region)
+        self.t = t
+        self.client = boto3.client(self.t, self.default_region)
 
     def get_regions(self):
         if self.regions is None:
@@ -102,10 +103,10 @@ class CommonClient:
         return self.regions
 
     def get_client(self, region='ap-southeast-1'):
-        return boto3.client('ec2', region)
+        return boto3.client(self.t, region)
 
     def get_az(self, region: str):
-        self.client = boto3.client('ec2', region)
+        self.client = boto3.client(self.t, region)
         resp = self.client.describe_availability_zones(Filters=[{
             'Name': 'region-name', 'Values': [region]
             }])
