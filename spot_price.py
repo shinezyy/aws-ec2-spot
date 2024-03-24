@@ -1,8 +1,8 @@
-import boto3
 import argparse
 import pandas as pd
 import sys
 import json
+import humanfriendly
 
 from datetime import datetime, timedelta
 
@@ -29,9 +29,7 @@ def get_instances(n_core: int = None, t: str = None):
         inst_list = [x for x in inst_list if '.8xl' in x]
     else:
         assert False
-    if t is None:
-        pass
-    else:
+    if t is not None:
         inst_list = [x for x in inst_list if t in x]
 
     return inst_list
@@ -44,6 +42,8 @@ parser.add_argument("-s", "--sort", required=True, choices=[
     "price", "ce", "ir"
     ])
 parser.add_argument("-c", "--cores", choices=[1, 2, 4, 8, 16, 32], type=int)
+
+parser.add_argument("-m", "--mem")
 
 parser.add_argument("-r", "--region", choices=wc.get_regions() + ['all'],
         default=wc.get_default_region())
@@ -66,13 +66,14 @@ foreign_keys = [
     # 'Linux On Demand cost',
     'Physical Processor',
     'Clock Speed(GHz)',
+    'Instance Memory',
 ]
 
 
 def get_spot_history(region: str):
     client = wc.get_client(region)
     resp = client.describe_spot_price_history(
-        InstanceTypes=get_instances(args.cores, args.type),
+        # InstanceTypes=get_instances(args.cores, args.type),
         StartTime=datetime.today() - timedelta(1),
         ProductDescriptions=['Linux/UNIX'],
     )
@@ -85,8 +86,16 @@ def get_spot_history(region: str):
     for history in histories:
         row = [history[k] for k in keys]
 
-        row += [ec2config.get_config(history['InstanceType'])[k].values[0]
+        inst_config = ec2config.get_config(history['InstanceType'])
+        if not len(inst_config):
+            continue
+        row += [inst_config[k].values[0]
                 for k in foreign_keys]
+        if args.mem is not None:
+            mem = humanfriendly.parse_size(args.mem)
+            inst_mem = humanfriendly.parse_size(inst_config['Instance Memory'].values[0])
+            if inst_mem < mem or inst_mem > mem * 2:
+                continue
         try:
             row[len(keys)] = int(row[len(keys)].split(' ')[0])  # ECU
         except ValueError as e:
@@ -104,7 +113,6 @@ def main():
     table = []
     if args.region == 'all':
         for region in wc.get_regions():
-            print(region)
             table += get_spot_history(region)
     else:
         table = get_spot_history(args.region)
@@ -134,8 +142,8 @@ def main():
         table = table.sort_values(by=['intr rate', 'SpotPrice', 'CostEfficiency',],
                 ascending=[True, True, False])
 
-    print(table)
-    table.to_csv('./table-{}.csv'.format(args.cores), index=None)
+    # print(table)
+    table.to_csv(f'./{args.region}-advised-{args.cores}core-table.csv', index=None)
 
     if args.type is None:
         table = table.drop_duplicates(

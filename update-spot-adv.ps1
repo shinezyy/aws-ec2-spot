@@ -1,0 +1,1 @@
+wget https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json -o .\data\spot-advisor-data.json
